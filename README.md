@@ -1,6 +1,6 @@
 # ✨ StyleCraft Chatbot
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://stylecraft-chatbot.streamlit.app/)
+Here is the URL: https://style-craft.streamlit.app/
 
 ## 📝 Overview
 
