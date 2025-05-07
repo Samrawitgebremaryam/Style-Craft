@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-
-# Configure Gemini API
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     st.error("API key not found. Please set the GEMINI_API_KEY environment variable.")
@@ -22,7 +20,6 @@ style_descriptions = {
     "Creative": "Imaginative and artistic language, perfect for storytelling or poetry."
 }
 
-# Define audience types
 audience_descriptions = {
     "General Public": "Content is tailored for a wide audience with varying backgrounds.",
     "Industry Professionals": "Language is technical and assumes familiarity with industry-specific terms.",
@@ -31,98 +28,119 @@ audience_descriptions = {
     "Elderly": "Clear and respectful language, considering the preferences and needs of older readers."
 }
 
-# Prompting type descriptions
 prompt_type_descriptions = {
     "Zero-Shot": (
-        "No examples are provided. The model generates a response based solely on the prompt's instructions. "
-        "This approach relies on the model's pre-existing knowledge and understanding of the task."
+        "No examples are provided. The model generates a response based solely on the prompt's instructions."
     ),
     "Few-Shot": (
-        "A few examples are provided to guide the model's response. "
-        "This helps the model understand the desired output format and improves accuracy."
+        "A few examples are provided to guide the model's response, improving format and accuracy."
     ),
     "Chain-of-Thought": (
-        "The model is instructed to reason step-by-step before arriving at a conclusion. "
-        "This technique enhances logical reasoning and is particularly useful for complex tasks."
+        "The model reasons step-by-step before answering. Great for complex tasks."
     )
 }
 
-# Streamlit app layout
 st.set_page_config(page_title="StyleCraft: Tailored Writing Assistant", layout="wide")
-st.title("📝 StyleCraft: Tailored Writing Assistant")
-st.write(
-    "Welcome to StyleCraft, your personalized writing assistant. Configure your desired settings, and enter your topic or sentence below to generate tailored content."
-)
 
-# Sidebar for user selections
+# Header and input field styles
+st.markdown("""
+    <h1 style='font-size: 2.5em;'>📚 <span style='color:#ffffff;'>StyleCraft:</span> Tailored Writing Assistant</h1>
+    <p style='font-size: 1.1em;'>Welcome to StyleCraft, your personalized writing assistant. Configure your desired settings, and enter your topic below to generate tailored content.</p>
+
+    <style>
+        /* Custom bottom input box - positioned fully outside the sidebar */
+        div[data-testid="stTextInput"] {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 26%;
+            width: 65%;
+            z-index: 9999;
+            background: transparent;
+        }
+
+        div[data-testid="stTextInput"] input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 1px solid #444;
+            background-color: #262730;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        div[data-testid="stTextInput"] input::placeholder {
+            color: #ccc;
+            opacity: 0.8;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Sidebar configuration
 with st.sidebar:
     st.header("Configuration")
 
-    # Writing style selection
+    learning_mode = st.checkbox("Learning Mode")
+
     selected_style = st.selectbox("Select a Writing Style:", list(style_descriptions.keys()))
-    st.markdown(f"**Description:** {style_descriptions[selected_style]}")
+    if learning_mode:
+        st.markdown(f"**Description:** {style_descriptions[selected_style]}")
 
-    # Audience selection
     selected_audience = st.selectbox("Select Your Target Audience:", list(audience_descriptions.keys()))
-    st.markdown(f"**Description:** {audience_descriptions[selected_audience]}")
+    if learning_mode:
+        st.markdown(f"**Description:** {audience_descriptions[selected_audience]}")
 
-    # Prompting type selection with descriptions
     prompt_type = st.selectbox("Select Prompt Type:", list(prompt_type_descriptions.keys()))
-    st.markdown(f"**Description:** {prompt_type_descriptions[prompt_type]}")
+    st.markdown(f"**Prompt Type Description:** {prompt_type_descriptions[prompt_type]}")
 
-    # Tone and complexity adjustments
-    formality = st.slider("Formality Level", 1, 10, 5)
-    complexity = st.slider("Complexity Level", 1, 10, 5)
-    emotion = st.slider("Emotional Tone", 1, 10, 5)
+    if learning_mode:
+        formality = st.slider("Formality Level", 1, 10, 5)
+        complexity = st.slider("Complexity Level", 1, 10, 5)
+        emotion = st.slider("Emotional Tone", 1, 10, 5)
+    else:
+        formality = 5
+        complexity = 5
+        emotion = 5
 
-# Function to construct prompt based on user selections
+# Prompt generation logic
 def construct_prompt(style, audience, topic, formality, complexity, emotion, prompt_type):
-    style_description = style_descriptions[style]
-    audience_description = audience_descriptions[audience]
+    style_text = style_descriptions[style]
+    audience_text = audience_descriptions[audience]
 
-    # Base prompt
-    prompt = (
-        f"You are a writer crafting content in the {style} style. "
-        f"Your target audience is {audience}. "
-        f"Maintain the following tone and complexity: "
-        f"Formality: {formality}/10, Complexity: {complexity}/10, Emotional Tone: {emotion}/10.\n\n"
-        f"Writing Style Description: {style_description}\n\n"
-        f"Audience Description: {audience_description}\n\n"
-        f"Now, write about the following topic:\n{topic}"
+    base = (
+        f"You are a writer crafting content in the {style} style for {audience}.\n"
+        f"Maintain tone and complexity levels — Formality: {formality}/10, Complexity: {complexity}/10, Emotional Tone: {emotion}/10.\n\n"
+        f"Style Description: {style_text}\n"
+        f"Audience Description: {audience_text}\n\n"
+        f"Write about:\n{topic}"
     )
 
-    # Apply the selected prompt type
-    if prompt_type == "Zero-Shot":
-        return prompt
-
-    elif prompt_type == "Few-Shot":
+    if prompt_type == "Few-Shot":
         examples = (
-            "\n\nExample 1: A professional email for a job interview confirmation.\n"
-            "Dear [Name],\nI hope this email finds you well. I would like to confirm my attendance at the job interview scheduled for [date]. Looking forward to discussing the opportunity further.\n\n"
-            "Example 2: A casual post for social media promoting a new blog post.\n"
-            "Hey everyone! I just published a new blog post on [topic], check it out here: [link]. Would love to hear your thoughts!\n\n"
+            "\n\nExample 1: A professional email.\n"
+            "Dear [Name],\nI’m writing to confirm my attendance at the interview scheduled for [Date]. I appreciate the opportunity.\n\n"
+            "Example 2: A casual social post.\n"
+            "Just dropped a new blog on productivity hacks — check it out! 💡 [link]\n\n"
         )
-        return prompt + examples
-
+        return base + examples
     elif prompt_type == "Chain-of-Thought":
-        chain_of_thought = (
-            "To generate a well-crafted response, I will first analyze the style, tone, and audience. "
-            "Then, I will carefully choose the right vocabulary and structure to suit the given requirements.\n\n"
-            "Let's begin...\n\n"
+        return (
+            "Let's reason step by step.\n"
+            "First, analyze tone, audience, and content type...\n\n"
+            + base
         )
-        return chain_of_thought + prompt
+    return base
 
-# User input at the bottom
-with st.container():
-    st.markdown("---")
-    user_input = st.text_area("Enter a topic or sentence:", key="user_input")
+# Input field (fixed and styled)
+user_input = st.text_input("", placeholder="Enter your topic or prompt here...", key="user_input")
 
-    if st.button("Generate Response"):
-        if user_input.strip() == "":
-            st.warning("Please enter a topic or sentence.")
-        else:
-            prompt = construct_prompt(selected_style, selected_audience, user_input, formality, complexity, emotion, prompt_type)
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            response = model.generate_content(prompt)
-            st.markdown(f"### Generated Response ({prompt_type})")
-            st.write(response.text)
+# Generate and display response
+if user_input.strip():
+    final_prompt = construct_prompt(
+        selected_style, selected_audience, user_input,
+        formality, complexity, emotion, prompt_type
+    )
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(final_prompt)
+    st.markdown(f"### ✍️ Generated Response ({prompt_type})")
+    st.write(response.text)
